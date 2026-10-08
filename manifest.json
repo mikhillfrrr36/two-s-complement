@@ -1,0 +1,18 @@
+{
+  "name": "Two's Complement - Mealy Machine",
+  "short_name": "2's Complement",
+  "description": "Two's complement computed by a 2-state right-to-left Mealy machine, step by step.",
+  "id": "/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14181c",
+  "theme_color": "#14181c",
+  "categories": ["education", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

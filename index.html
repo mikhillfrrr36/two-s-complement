@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#14181c" />
+<meta name="description" content="Two's complement computed by a 2-state right-to-left Mealy machine." />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="2's Complement" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<title>Two's Complement — Relay Logic</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --ink: #14181c;
+    --ink-soft: #1d2227;
+    --panel: #21262c;
+    --line: #3a4149;
+    --paper: #efe9de;
+    --paper-dim: #b9b2a3;
+    --amber: #c97d30;
+    --amber-bright: #e2a361;
+    --sage: #7fa17f;
+    --brick: #b5533c;
+    --focus: #e2a361;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.5;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: 0.05;
+    z-index: 0;
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+
+  .masthead .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--amber-bright);
+    letter-spacing: 0.02em;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 700;
+    font-size: 34px;
+    margin: 10px 0 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .masthead p {
+    max-width: 62ch;
+    color: var(--paper-dim);
+    font-size: 15.5px;
+    margin: 0;
+  }
+
+  .masthead p code {
+    color: var(--paper);
+  }
+
+  section { margin-bottom: 44px; }
+
+  h2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--paper-dim);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  h2 .num {
+    color: var(--amber-bright);
+  }
+
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+    transform: translateY(-3px);
+  }
+
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ---------- controls ---------- */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 220px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    padding: 11px 14px;
+    border-radius: 2px;
+  }
+
+  input[type="text"]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    background: var(--panel);
+    color: var(--paper);
+    border: 1px solid var(--line);
+    padding: 11px 16px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  button:hover:not(:disabled) { border-color: var(--amber-bright); color: var(--amber-bright); }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  button.primary {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) { background: var(--amber-bright); border-color: var(--amber-bright); color: var(--ink); }
+
+  .error-msg {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--brick);
+    min-height: 18px;
+    margin-top: 8px;
+  }
+
+  /* ---------- tapes ---------- */
+  .tape-panel {
+    background: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 22px;
+    overflow-x: auto;
+  }
+
+  .tape-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 6px;
+  }
+
+  .tape-row:last-child { margin-bottom: 0; }
+
+  .tape-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--paper-dim);
+    width: 58px;
+    flex-shrink: 0;
+  }
+
+  .cells { display: flex; gap: 4px; }
+
+  .cell {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--panel);
+    color: var(--paper-dim);
+    transition: all 0.15s ease;
+    position: relative;
+  }
+
+  .cell.pending { color: var(--paper-dim); }
+  .cell.current-in {
+    border-color: var(--amber-bright);
+    color: var(--amber-bright);
+    box-shadow: 0 0 0 1px var(--amber-bright) inset;
+  }
+  .cell.done-copy { color: var(--sage); border-color: var(--sage); }
+  .cell.done-flip { color: var(--brick); border-color: var(--brick); }
+  .cell.empty { visibility: hidden; }
+
+  .pointer-row { display: flex; gap: 4px; margin-bottom: 2px; padding-left: 72px; }
+  .pointer-cell { width: 34px; flex-shrink: 0; text-align: center; font-size: 12px; color: var(--amber-bright); font-family: 'IBM Plex Mono', monospace; height: 14px; }
+
+  .index-row { display: flex; gap: 4px; padding-left: 72px; margin-top: 6px; }
+  .index-cell { width: 34px; flex-shrink: 0; text-align: center; font-size: 10px; color: var(--paper-dim); font-family: 'IBM Plex Mono', monospace; opacity: 0.6; }
+
+  /* ---------- fsm diagram ---------- */
+  .fsm-wrap {
+    background: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 12px;
+  }
+
+  .fsm-wrap svg { width: 100%; height: auto; display: block; }
+
+  .node-circle {
+    fill: var(--panel);
+    stroke: var(--line);
+    stroke-width: 2;
+    transition: all 0.2s ease;
+  }
+  .node-circle.active {
+    fill: var(--amber);
+    stroke: var(--amber-bright);
+  }
+  .node-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    fill: var(--paper);
+    text-anchor: middle;
+    transition: fill 0.2s ease;
+  }
+  .node-label.active { fill: var(--ink); }
+  .node-sub {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px;
+    fill: var(--paper-dim);
+    text-anchor: middle;
+  }
+  .edge-path { fill: none; stroke: var(--line); stroke-width: 1.6; }
+  .edge-label { font-family: 'IBM Plex Mono', monospace; font-size: 13px; fill: var(--paper-dim); text-anchor: middle; }
+  .start-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; fill: var(--paper-dim); }
+
+  /* ---------- transition table ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    color: var(--paper-dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+  tbody tr.active-row {
+    background: rgba(201, 125, 48, 0.18);
+    color: var(--amber-bright);
+  }
+
+  /* ---------- log ---------- */
+  .log-panel {
+    background: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .log-entry {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 9px 18px;
+    border-bottom: 1px solid var(--line);
+    color: var(--paper-dim);
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry b { color: var(--paper); }
+  .log-empty { padding: 18px; color: var(--paper-dim); font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+  /* ---------- result ---------- */
+  .result-panel {
+    background: var(--ink-soft);
+    border: 1px solid var(--amber);
+    border-radius: 2px;
+    padding: 20px 22px;
+    display: none;
+  }
+  .result-panel.show { display: block; }
+  .result-row { display: flex; justify-content: space-between; gap: 20px; padding: 6px 0; flex-wrap: wrap; }
+  .result-row .k { color: var(--paper-dim); font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+  .result-row .v { font-family: 'IBM Plex Mono', monospace; font-size: 15px; letter-spacing: 0.03em; word-break: break-all; text-align: right; }
+  .result-row .v.big { color: var(--amber-bright); font-weight: 600; }
+  .note {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--paper-dim);
+  }
+
+  footer {
+    margin-top: 60px;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--paper-dim);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="masthead">
+    <div class="tag">THEORY OF COMPUTATION — FINITE STATE TRANSDUCER</div>
+    <h1>Two's Complement, Bit by Bit</h1>
+    <p>
+      A 2-state <b>Mealy machine</b> that computes the two's complement of an arbitrarily
+      long binary string, reading strictly <b>right to left</b>. It copies bits until it meets
+      the first <code>1</code>, then flips every bit after that. No lookahead, no backtracking —
+      one bit of memory (the current state) is enough.
+    </p>
+  </div>
+
+  <section id="input-section">
+    <h2><span class="num">01</span> INPUT</h2>
+    <div class="controls">
+      <input id="bitInput" type="text" value="10110" spellcheck="false" autocomplete="off" aria-label="Binary string input" />
+      <button id="loadBtn" class="primary">Load</button>
+      <button id="stepBtn" disabled>Step ▸</button>
+      <button id="runBtn" disabled>Run ▸▸</button>
+      <button id="resetBtn" disabled>Reset</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </section>
+
+  <section id="tape-section">
+    <h2><span class="num">02</span> TAPES</h2>
+    <div class="tape-panel">
+      <div class="index-row" id="indexRow"></div>
+      <div class="tape-row">
+        <span class="tape-label">INPUT</span>
+        <div class="cells" id="inputCells"></div>
+      </div>
+      <div class="pointer-row" id="pointerRow"></div>
+      <div class="tape-row">
+        <span class="tape-label">OUTPUT</span>
+        <div class="cells" id="outputCells"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fsm-section">
+    <h2><span class="num">03</span> STATE MACHINE</h2>
+    <div class="fsm-wrap">
+      <svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+        <!-- start arrow -->
+        <path class="edge-path" d="M 20 130 L 85 130" marker-end="url(#arrow)"></path>
+        <text class="start-label" x="22" y="118">start</text>
+
+        <!-- S0 self loop (0/0) -->
+        <path class="edge-path" d="M 130 78 C 110 20, 210 20, 190 78" marker-end="url(#arrow)"></path>
+        <text class="edge-label" x="160" y="34">0 / 0</text>
+
+        <!-- S0 -> S1 -->
+        <path class="edge-path" d="M 195 118 C 320 60, 420 60, 480 108" marker-end="url(#arrow)"></path>
+        <text class="edge-label" x="340" y="58">1 / 1</text>
+
+        <!-- S1 self loop (0/1 , 1/0) -->
+        <path class="edge-path" d="M 490 78 C 470 20, 570 20, 550 78" marker-end="url(#arrow)"></path>
+        <text class="edge-label" x="520" y="34">0 / 1 , 1 / 0</text>
+
+        <!-- nodes -->
+        <circle id="node-S0" class="node-circle" cx="160" cy="130" r="55"></circle>
+        <text class="node-label" id="label-S0" x="160" y="126">S0</text>
+        <text class="node-sub" x="160" y="148">copying</text>
+
+        <circle id="node-S1" class="node-circle" cx="520" cy="130" r="55"></circle>
+        <text class="node-label" id="label-S1" x="520" y="126">S1</text>
+        <text class="node-sub" x="520" y="148">flipping</text>
+
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#3a4149"></path>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  </section>
+
+  <section id="table-section">
+    <h2><span class="num">04</span> TRANSITION TABLE</h2>
+    <table>
+      <thead>
+        <tr><th>state</th><th>input</th><th>output</th><th>next state</th></tr>
+      </thead>
+      <tbody id="transitionBody">
+        <tr data-key="S0-0"><td>S0</td><td>0</td><td>0</td><td>S0</td></tr>
+        <tr data-key="S0-1"><td>S0</td><td>1</td><td>1</td><td>S1</td></tr>
+        <tr data-key="S1-0"><td>S1</td><td>0</td><td>1</td><td>S1</td></tr>
+        <tr data-key="S1-1"><td>S1</td><td>1</td><td>0</td><td>S1</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="log-section">
+    <h2><span class="num">05</span> EXECUTION LOG</h2>
+    <div class="log-panel" id="logPanel">
+      <div class="log-empty">Load a bit string to begin.</div>
+    </div>
+  </section>
+
+  <section id="result-section">
+    <h2><span class="num">06</span> RESULT</h2>
+    <div class="result-panel" id="resultPanel">
+      <div class="result-row"><span class="k">INPUT (binary)</span><span class="v mono" id="resInBin"></span></div>
+      <div class="result-row"><span class="k">TWO'S COMPLEMENT (binary)</span><span class="v big mono" id="resOutBin"></span></div>
+      <div class="result-row"><span class="k">INPUT as signed N-bit integer</span><span class="v mono" id="resInDec"></span></div>
+      <div class="result-row"><span class="k">RESULT as signed N-bit integer</span><span class="v big mono" id="resOutDec"></span></div>
+      <div class="note" id="resNote"></div>
+    </div>
+  </section>
+
+  <footer>
+    right-to-left Mealy transducer · states = {S0 copying, S1 flipping} · Σ = {0,1} · deterministic, single pass
+  </footer>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- transition function of the Mealy machine ----------
+  // delta(state, input) -> { output, next }
+  function delta(state, input) {
+    if (state === "S0" && input === "0") return { output: "0", next: "S0" };
+    if (state === "S0" && input === "1") return { output: "1", next: "S1" };
+    if (state === "S1" && input === "0") return { output: "1", next: "S1" };
+    return { output: "0", next: "S1" }; // S1, input === "1"
+  }
+
+  const els = {
+    bitInput: document.getElementById("bitInput"),
+    loadBtn: document.getElementById("loadBtn"),
+    stepBtn: document.getElementById("stepBtn"),
+    runBtn: document.getElementById("runBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    errorMsg: document.getElementById("errorMsg"),
+    indexRow: document.getElementById("indexRow"),
+    inputCells: document.getElementById("inputCells"),
+    outputCells: document.getElementById("outputCells"),
+    pointerRow: document.getElementById("pointerRow"),
+    logPanel: document.getElementById("logPanel"),
+    resultPanel: document.getElementById("resultPanel"),
+    resInBin: document.getElementById("resInBin"),
+    resOutBin: document.getElementById("resOutBin"),
+    resInDec: document.getElementById("resInDec"),
+    resOutDec: document.getElementById("resOutDec"),
+    resNote: document.getElementById("resNote"),
+    nodeS0: document.getElementById("node-S0"),
+    nodeS1: document.getElementById("node-S1"),
+    labelS0: document.getElementById("label-S0"),
+    labelS1: document.getElementById("label-S1"),
+  };
+
+  const MAX_LEN = 256;
+
+  let bits = [];          // array of '0'/'1', index 0 = leftmost (MSB)
+  let output = [];        // same length, filled as we go, '' until processed
+  let cursor = -1;        // index currently being processed, right to left
+  let fsmState = "S0";
+  let running = false;
+  let timer = null;
+
+  function setHighlightState(s) {
+    els.nodeS0.classList.toggle("active", s === "S0");
+    els.nodeS1.classList.toggle("active", s === "S1");
+    els.labelS0.classList.toggle("active", s === "S0");
+    els.labelS1.classList.toggle("active", s === "S1");
+  }
+
+  function clearTransitionHighlight() {
+    document.querySelectorAll("#transitionBody tr").forEach(r => r.classList.remove("active-row"));
+  }
+
+  function highlightTransition(state, input) {
+    clearTransitionHighlight();
+    const row = document.querySelector('#transitionBody tr[data-key="' + state + "-" + input + '"]');
+    if (row) row.classList.add("active-row");
+  }
+
+  function render() {
+    // index row
+    els.indexRow.innerHTML = bits.map((_, i) =>
+      `<span class="index-cell">${i}</span>`).join("");
+
+    // input cells
+    els.inputCells.innerHTML = bits.map((b, i) => {
+      let cls = "cell pending";
+      if (i === cursor) cls = "cell current-in";
+      else if (output[i] !== "") cls = "cell " + (fsmStateAtIndex(i) === "flip" ? "done-flip" : "done-copy");
+      return `<span class="${cls}">${b}</span>`;
+    }).join("");
+
+    // pointer row (marker under current cursor cell)
+    els.pointerRow.innerHTML = bits.map((_, i) =>
+      `<span class="pointer-cell">${i === cursor ? "▲" : ""}</span>`).join("");
+
+    // output cells
+    els.outputCells.innerHTML = output.map((b, i) => {
+      if (b === "") return `<span class="cell empty">0</span>`;
+      const cls = "cell " + (outFlippedAt[i] ? "done-flip" : "done-copy");
+      return `<span class="${cls}">${b}</span>`;
+    }).join("");
+  }
+
+  // track, per index, whether that output bit was produced while flipping
+  let outFlippedAt = [];
+  function fsmStateAtIndex(i) {
+    return outFlippedAt[i] ? "flip" : "copy";
+  }
+
+  function appendLog(text) {
+    if (els.logPanel.querySelector(".log-empty")) els.logPanel.innerHTML = "";
+    const div = document.createElement("div");
+    div.className = "log-entry";
+    div.innerHTML = text;
+    els.logPanel.appendChild(div);
+    els.logPanel.scrollTop = els.logPanel.scrollHeight;
+  }
+
+  function step() {
+    if (cursor < 0) return;
+    const input = bits[cursor];
+    const { output: outBit, next } = delta(fsmState, input);
+    output[cursor] = outBit;
+    outFlippedAt[cursor] = (fsmState === "S1");
+
+    highlightTransition(fsmState, input);
+    appendLog(
+      `cell <b>${cursor}</b> · read <b>${input}</b> in state <b>${fsmState}</b> → write <b>${outBit}</b> → move to <b>${next}</b>`
+    );
+
+    fsmState = next;
+    setHighlightState(fsmState);
+    cursor--;
+    render();
+
+    if (cursor < 0) finish();
+  }
+
+  function finish() {
+    stopRun();
+    els.stepBtn.disabled = true;
+    els.runBtn.disabled = true;
+    appendLog(`<span style="color:var(--amber-bright)">done — tape exhausted.</span>`);
+    showResult();
+  }
+
+  function showResult() {
+    const inBin = bits.join("");
+    const outBin = output.join("");
+    els.resInBin.textContent = inBin;
+    els.resOutBin.textContent = outBin;
+
+    const n = bits.length;
+    const inVal = signedFromBits(bits);
+    const outVal = signedFromBits(output);
+    els.resInDec.textContent = inVal.toString() + "  (as " + n + "-bit signed)";
+    els.resOutDec.textContent = outVal.toString() + "  (as " + n + "-bit signed)";
+
+    const minNeg = -(2n ** BigInt(n - 1));
+    if (inVal === 0n) {
+      els.resNote.textContent = "Zero is its own two's complement: flipping never triggers because no 1 was ever found.";
+    } else if (inVal === minNeg) {
+      els.resNote.textContent = "This input is the most negative " + n + "-bit value — its two's complement overflows back to itself, the one case where negation doesn't change the value.";
+    } else {
+      els.resNote.textContent = "Result equals −(input), confirming the machine performed a correct negation in one right-to-left pass.";
+    }
+    els.resultPanel.classList.add("show");
+  }
+
+  function signedFromBits(arr) {
+    const n = arr.length;
+    let unsigned = 0n;
+    for (let i = 0; i < n; i++) {
+      unsigned = (unsigned << 1n) | BigInt(arr[i]);
+    }
+    if (arr[0] === "1") {
+      return unsigned - (1n << BigInt(n));
+    }
+    return unsigned;
+  }
+
+  function stopRun() {
+    running = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    els.runBtn.textContent = "Run ▸▸";
+  }
+
+  function toggleRun() {
+    if (running) { stopRun(); return; }
+    running = true;
+    els.runBtn.textContent = "Pause ❙❙";
+    timer = setInterval(() => {
+      step();
+      if (cursor < 0) stopRun();
+    }, 550);
+  }
+
+  function loadInput() {
+    const raw = els.bitInput.value.trim();
+    els.errorMsg.textContent = "";
+
+    if (raw.length === 0) {
+      els.errorMsg.textContent = "Enter a binary string first.";
+      return;
+    }
+    if (!/^[01]+$/.test(raw)) {
+      els.errorMsg.textContent = "Only characters 0 and 1 are allowed.";
+      return;
+    }
+    if (raw.length > MAX_LEN) {
+      els.errorMsg.textContent = "Keep it under " + MAX_LEN + " bits so the tape stays readable.";
+      return;
+    }
+
+    stopRun();
+    bits = raw.split("");
+    output = new Array(bits.length).fill("");
+    outFlippedAt = new Array(bits.length).fill(false);
+    cursor = bits.length - 1;
+    fsmState = "S0";
+    setHighlightState("S0");
+    clearTransitionHighlight();
+    els.logPanel.innerHTML = "";
+    appendLog(`loaded <b>${bits.length}</b> bits · starting in state <b>S0</b> at the rightmost cell (index ${cursor}).`);
+    els.resultPanel.classList.remove("show");
+
+    els.stepBtn.disabled = false;
+    els.runBtn.disabled = false;
+    els.resetBtn.disabled = false;
+    render();
+  }
+
+  function resetAll() {
+    stopRun();
+    bits = [];
+    output = [];
+    outFlippedAt = [];
+    cursor = -1;
+    fsmState = "S0";
+    setHighlightState("S0");
+    clearTransitionHighlight();
+    els.logPanel.innerHTML = '<div class="log-empty">Load a bit string to begin.</div>';
+    els.resultPanel.classList.remove("show");
+    els.stepBtn.disabled = true;
+    els.runBtn.disabled = true;
+    els.resetBtn.disabled = true;
+    els.errorMsg.textContent = "";
+    render();
+  }
+
+  els.loadBtn.addEventListener("click", loadInput);
+  els.bitInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadInput(); });
+  els.stepBtn.addEventListener("click", step);
+  els.runBtn.addEventListener("click", toggleRun);
+  els.resetBtn.addEventListener("click", resetAll);
+
+  // initial paint
+  setHighlightState("S0");
+  render();
+})();
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("service-worker.js").catch(function (e) {
+        console.warn("Service worker registration failed:", e);
+      });
+    });
+  }
+</script>
+</body>
+</html>
